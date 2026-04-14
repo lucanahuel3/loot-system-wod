@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farm Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c9933a;
+  --gold-light: #e8b95a;
+  --gold-dim: #7a5a20;
+  --silver: #a8b5c0;
+  --copper: #b5714a;
+  --bg: #0d0f0e;
+  --bg2: #141714;
+  --bg3: #1a1e1a;
+  --bg4: #1f241f;
+  --border: rgba(201,147,58,0.18);
+  --border-strong: rgba(201,147,58,0.38);
+  --text: #e8e0d0;
+  --text-dim: #8a8478;
+  --text-muted: #4a4840;
+  --crystal: #7eb8d4;
+  --armor: #8a9e7a;
+  --potion: #c4776a;
+  --radius: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Crimson Pro', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Subtle parchment texture via CSS */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(201,147,58,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(126,184,212,0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-header {
+  border-bottom: 0.5px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.app-header h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: .12em;
+}
+
+.app-header .subtitle {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.sword-icon {
+  width: 22px; height: 22px;
+  opacity: .7;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 210px 1fr 270px;
+  height: calc(100vh - 53px);
+  height: calc(100dvh - 53px);
+  position: relative;
+  z-index: 1;
+}
+
+.col {
+  border-right: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.col:last-child { border-right: none; }
+
+.col-header {
+  padding: 14px 16px 10px;
+  border-bottom: 0.5px solid var(--border);
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: .1em;
+  color: var(--gold-dim);
+  flex-shrink: 0;
+}
+
+.col-body {
+  padding: 14px 14px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ---- CALENDAR ---- */
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cal-nav-btn {
+  background: none;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  width: 26px; height: 26px;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, color .15s;
+}
+.cal-nav-btn:hover { border-color: var(--border-strong); color: var(--gold); }
+
+.cal-month {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  color: var(--text);
+  letter-spacing: .06em;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  text-align: center;
+}
+
+.cal-day-name {
+  font-size: 9px;
+  color: var(--text-muted);
+  padding: 3px 0 5px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: .06em;
+}
+
+.cal-day {
+  font-size: 12px;
+  padding: 5px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--text-dim);
+  position: relative;
+  transition: background .12s, color .12s;
+  line-height: 1;
+}
+.cal-day:hover { background: var(--bg3); color: var(--text); }
+.cal-day.today { color: var(--gold); }
+.cal-day.selected { background: var(--bg4); color: var(--gold-light); border: 0.5px solid var(--border-strong); }
+.cal-day.has-data::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; left: 50%;
+  transform: translateX(-50%);
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--gold-dim);
+}
+
+.divider {
+  border: none;
+  border-top: 0.5px solid var(--border);
+  margin: 14px 0;
+}
+
+.mini-stat {
+  margin-bottom: 8px;
+}
+.mini-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'Cinzel', serif;
+  letter-spacing: .06em;
+  margin-bottom: 2px;
+}
+.mini-stat-value {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--text);
+}
+
+/* ---- CENTER PANEL ---- */
+.selected-date {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  color: var(--gold);
+  letter-spacing: .08em;
+  margin-bottom: 14px;
+}
+
+.money-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.money-card {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  text-align: center;
+}
+.money-card .icon { font-size: 16px; margin-bottom: 4px; }
+.money-card .amount {
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+}
+.money-card .clabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: 'Cinzel', serif;
+  letter-spacing: .07em;
+  margin-top: 3px;
+}
+.money-card.gold .amount { color: var(--gold); }
+.money-card.silver .amount { color: var(--silver); }
+.money-card.copper .amount { color: var(--copper); }
+
+.section-label {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.item-card {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.item-icon {
+  width: 26px; height: 26px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.item-icon.crystal { background: rgba(126,184,212,0.12); }
+.item-icon.armor   { background: rgba(138,158,122,0.12); }
+.item-icon.potion  { background: rgba(196,119,106,0.12); }
+.item-icon.other   { background: rgba(201,147,58,0.10); }
+
+.item-info {}
+.item-val { font-size: 18px; font-weight: 300; color: var(--text); line-height: 1; }
+.item-lbl { font-size: 9px; color: var(--text-dim); font-family: 'Cinzel', serif; letter-spacing: .06em; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.stat-box {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.stat-box.highlight { border-color: var(--border-strong); }
+.stat-box-label {
+  font-size: 9px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.stat-box-value {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text);
+}
+.stat-box.highlight .stat-box-value { color: var(--gold-light); }
+
+/* ---- RIGHT PANEL ---- */
+.add-btn {
+  width: 100%;
+  padding: 9px;
+  background: none;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--gold);
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: background .15s;
+}
+.add-btn:hover { background: rgba(201,147,58,0.07); }
+
+.fight-item {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 7px;
+  transition: border-color .12s;
+}
+.fight-item:hover { border-color: var(--border-strong); }
+
+.fight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 7px;
+}
+.fight-title {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: .05em;
+}
+.fight-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fight-time { font-size: 11px; color: var(--text-dim); font-style: italic; }
+.del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: color .12s, background .12s;
+}
+.del-btn:hover { color: var(--potion); background: rgba(196,119,106,0.1); }
+
+.fight-drops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 0.5px solid;
+}
+.badge.gold    { background: rgba(201,147,58,0.10); border-color: rgba(201,147,58,0.25); color: var(--gold); }
+.badge.silver  { background: rgba(168,181,192,0.10); border-color: rgba(168,181,192,0.25); color: var(--silver); }
+.badge.copper  { background: rgba(181,113,74,0.10); border-color: rgba(181,113,74,0.25); color: var(--copper); }
+.badge.crystal { background: rgba(126,184,212,0.10); border-color: rgba(126,184,212,0.25); color: var(--crystal); }
+.badge.armor   { background: rgba(138,158,122,0.10); border-color: rgba(138,158,122,0.25); color: var(--armor); }
+.badge.potion  { background: rgba(196,119,106,0.10); border-color: rgba(196,119,106,0.25); color: var(--potion); }
+.badge.other   { background: rgba(201,147,58,0.07); border-color: rgba(201,147,58,0.15); color: var(--text-dim); }
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  padding: 32px 0;
+}
+
+/* ---- MODAL ---- */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-bg.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 0.5px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 24px;
+  width: 380px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: .1em;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.form-section {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--text-muted);
+  margin: 12px 0 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.form-row label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  font-family: 'Cinzel', serif;
+  letter-spacing: .05em;
+}
+
+.form-row input {
+  width: 100%;
+  padding: 7px 9px;
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Crimson Pro', serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color .15s;
+}
+.form-row input:focus { border-color: var(--border-strong); }
+
+.btn-save {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  background: rgba(201,147,58,0.10);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--gold-light);
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: .1em;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-save:hover { background: rgba(201,147,58,0.18); }
+
+.btn-cancel {
+  width: 100%;
+  margin-top: 7px;
+  padding: 8px;
+  background: none;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: .07em;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.btn-cancel:hover { border-color: var(--border-strong); }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Mobile responsive */
+@media (max-width: 780px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow-y: auto;
+  }
+  .col {
+    border-right: none;
+    border-bottom: 0.5px solid var(--border);
+    overflow: visible;
+  }
+  .col-body { overflow-y: visible; }
+  body::before { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <svg class="sword-icon" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 19L13 9M13 9L16 3L19 6L13 9ZM13 9L15 11" stroke="#c9933a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 17L3 19L5 21" stroke="#c9933a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div>
+    <h1>FARM TRACKER</h1>
+  </div>
+  <span class="subtitle" style="margin-left:8px">Registro de peleas y estadísticas</span>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Calendar -->
+  <div class="col">
+    <div class="col-header">Calendario</div>
+    <div class="col-body">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="prev-month">&#8249;</button>
+        <span class="cal-month" id="cal-month-label"></span>
+        <button class="cal-nav-btn" id="next-month">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+
+      <hr class="divider">
+      <div class="section-label">Global</div>
+
+      <div class="mini-stat">
+        <div class="mini-stat-label">Total peleas</div>
+        <div class="mini-stat-value" id="g-fights">0</div>
+      </div>
+      <div class="mini-stat">
+        <div class="mini-stat-label">Total mobs</div>
+        <div class="mini-stat-value" id="g-mobs">0</div>
+      </div>
+      <div class="mini-stat">
+        <div class="mini-stat-label">Tiempo total</div>
+        <div class="mini-stat-value" id="g-time">0m</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: Stats -->
+  <div class="col">
+    <div class="col-header">Resumen del día</div>
+    <div class="col-body">
+      <div class="selected-date" id="center-date"></div>
+
+      <div class="section-label">Dinero ganado</div>
+      <div class="money-row">
+        <div class="money-card gold">
+          <div class="icon">●</div>
+          <div class="amount" id="d-gold">0</div>
+          <div class="clabel">Oro</div>
+        </div>
+        <div class="money-card silver">
+          <div class="icon">●</div>
+          <div class="amount" id="d-silver">0</div>
+          <div class="clabel">Plata</div>
+        </div>
+        <div class="money-card copper">
+          <div class="icon">●</div>
+          <div class="amount" id="d-copper">0</div>
+          <div class="clabel">Cobre</div>
+        </div>
+      </div>
+
+      <div class="section-label">Items obtenidos</div>
+      <div class="items-grid">
+        <div class="item-card">
+          <div class="item-icon crystal">💎</div>
+          <div class="item-info">
+            <div class="item-val" id="d-crystal">0</div>
+            <div class="item-lbl">Cristales</div>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-icon armor">🛡</div>
+          <div class="item-info">
+            <div class="item-val" id="d-armor">0</div>
+            <div class="item-lbl">Armaduras</div>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-icon potion">🧪</div>
+          <div class="item-info">
+            <div class="item-val" id="d-potion">0</div>
+            <div class="item-lbl">Pociones</div>
+          </div>
+        </div>
+        <div class="item-card">
+          <div class="item-icon other">✦</div>
+          <div class="item-info">
+            <div class="item-val" id="d-other">0</div>
+            <div class="item-lbl">Otros</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Estadísticas de combate</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-box-label">Peleas del día</div>
+          <div class="stat-box-value" id="d-fights">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Tiempo en peleas</div>
+          <div class="stat-box-value" id="d-time">0m</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Mobs totales</div>
+          <div class="stat-box-value" id="d-mobs">0</div>
+        </div>
+        <div class="stat-box highlight">
+          <div class="stat-box-label">Mobs / hora</div>
+          <div class="stat-box-value" id="d-mph">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Oro / hora</div>
+          <div class="stat-box-value" id="d-gph">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Drops prom. / pelea</div>
+          <div class="stat-box-value" id="d-dpf">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Fights list -->
+  <div class="col">
+    <div class="col-header">Registro de peleas</div>
+    <div class="col-body">
+      <button class="add-btn" id="open-modal-btn">+ AÑADIR PELEA</button>
+      <div id="fights-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-title">Registrar pelea</div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Mobs derrotados</label>
+        <input type="number" id="f-mobs" min="0" value="0">
+      </div>
+      <div class="form-row">
+        <label>Duración (minutos)</label>
+        <input type="number" id="f-duration" min="0" step="0.5" value="0">
+      </div>
+    </div>
+
+    <div class="form-section">Dinero obtenido</div>
+    <div class="form-grid">
+      <div class="form-row"><label>Oro</label><input type="number" id="f-gold" min="0" value="0"></div>
+      <div class="form-row"><label>Plata</label><input type="number" id="f-silver" min="0" value="0"></div>
+      <div class="form-row"><label>Cobre</label><input type="number" id="f-copper" min="0" value="0"></div>
+    </div>
+
+    <div class="form-section">Drops obtenidos</div>
+    <div class="form-grid">
+      <div class="form-row"><label>Cristales</label><input type="number" id="f-crystal" min="0" value="0"></div>
+      <div class="form-row"><label>Armaduras</label><input type="number" id="f-armor" min="0" value="0"></div>
+      <div class="form-row"><label>Pociones</label><input type="number" id="f-potion" min="0" value="0"></div>
+      <div class="form-row"><label>Otros</label><input type="number" id="f-other" min="0" value="0"></div>
+    </div>
+
+    <button class="btn-save" id="save-fight-btn">GUARDAR PELEA</button>
+    <button class="btn-cancel" id="close-modal-btn">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['D','L','M','M','J','V','S'];
+const STORAGE_KEY = 'farmtracker_v1';
+
+let data = {};
+let selectedDate = todayKey();
+let calYear, calMonth;
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) data = JSON.parse(raw);
+  } catch(e) { data = {}; }
+}
+
+function initCal() {
+  const d = new Date();
+  calYear = d.getFullYear();
+  calMonth = d.getMonth();
+}
+
+function renderCal() {
+  document.getElementById('cal-month-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  DAYS.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-name';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+  const first = new Date(calYear, calMonth, 1).getDay();
+  for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+  const days = new Date(calYear, calMonth+1, 0).getDate();
+  const today = todayKey();
+  for (let d = 1; d <= days; d++) {
+    const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    el.textContent = d;
+    if (key === today) el.classList.add('today');
+    if (key === selectedDate) el.classList.add('selected');
+    if (data[key] && data[key].length > 0) el.classList.add('has-data');
+    el.onclick = () => { selectedDate = key; renderCal(); renderDay(); renderFights(); };
+    grid.appendChild(el);
+  }
+}
+
+function getDayData() { return data[selectedDate] || []; }
+
+function fmtTime(mins) {
+  if (mins >= 60) return `${Math.floor(mins/60)}h ${Math.round(mins%60)}m`;
+  return `${Math.round(mins)}m`;
+}
+
+function renderDay() {
+  const fights = getDayData();
+  const d = new Date(selectedDate + 'T12:00:00');
+  document.getElementById('center-date').textContent =
+    `${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+
+  let gold=0, silver=0, copper=0, crystal=0, armor=0, potion=0, other=0, mobs=0, mins=0;
+  fights.forEach(f => {
+    gold+=f.gold; silver+=f.silver; copper+=f.copper;
+    crystal+=f.crystal; armor+=f.armor; potion+=f.potion; other+=f.other;
+    mobs+=f.mobs; mins+=f.duration;
+  });
+
+  document.getElementById('d-gold').textContent = gold;
+  document.getElementById('d-silver').textContent = silver;
+  document.getElementById('d-copper').textContent = copper;
+  document.getElementById('d-crystal').textContent = crystal;
+  document.getElementById('d-armor').textContent = armor;
+  document.getElementById('d-potion').textContent = potion;
+  document.getElementById('d-other').textContent = other;
+  document.getElementById('d-mobs').textContent = mobs;
+  document.getElementById('d-fights').textContent = fights.length;
+  document.getElementById('d-time').textContent = fmtTime(mins);
+
+  const h = mins / 60;
+  document.getElementById('d-mph').textContent = h > 0 ? Math.round(mobs/h) : '—';
+  document.getElementById('d-gph').textContent = h > 0 ? Math.round(gold/h) : '—';
+  const totalItems = crystal + armor + potion + other;
+  document.getElementById('d-dpf').textContent = fights.length > 0 ? (totalItems/fights.length).toFixed(1) : '—';
+
+  // Global stats
+  let gFights=0, gMobs=0, gMins=0;
+  Object.values(data).forEach(arr => {
+    gFights += arr.length;
+    arr.forEach(f => { gMobs += f.mobs; gMins += f.duration; });
+  });
+  document.getElementById('g-fights').textContent = gFights;
+  document.getElementById('g-mobs').textContent = gMobs;
+  document.getElementById('g-time').textContent = fmtTime(gMins);
+}
+
+function renderFights() {
+  const list = document.getElementById('fights-list');
+  const fights = getDayData();
+  if (fights.length === 0) {
+    list.innerHTML = '<div class="empty-state">Sin peleas registradas hoy.<br>Añade tu primera pelea.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  fights.forEach((f, i) => {
+    const el = document.createElement('div');
+    el.className = 'fight-item';
+    let badges = '';
+    if (f.gold>0)    badges += `<span class="badge gold">● ${f.gold} oro</span>`;
+    if (f.silver>0)  badges += `<span class="badge silver">● ${f.silver} plata</span>`;
+    if (f.copper>0)  badges += `<span class="badge copper">● ${f.copper} cobre</span>`;
+    if (f.crystal>0) badges += `<span class="badge crystal">💎 ${f.crystal}</span>`;
+    if (f.armor>0)   badges += `<span class="badge armor">🛡 ${f.armor}</span>`;
+    if (f.potion>0)  badges += `<span class="badge potion">🧪 ${f.potion}</span>`;
+    if (f.other>0)   badges += `<span class="badge other">✦ ${f.other}</span>`;
+    if (!badges)     badges  = `<span style="font-size:10px;color:var(--text-muted);font-style:italic">Sin drops</span>`;
+    el.innerHTML = `
+      <div class="fight-header">
+        <span class="fight-title">Pelea #${i+1} — ${f.mobs} mobs</span>
+        <div class="fight-meta">
+          <span class="fight-time">${fmtTime(f.duration)}</span>
+          <button class="del-btn" data-idx="${i}" title="Eliminar">✕</button>
+        </div>
+      </div>
+      <div class="fight-drops">${badges}</div>`;
+    list.appendChild(el);
+  });
+  list.querySelectorAll('.del-btn').forEach(btn => {
+    btn.onclick = () => {
+      data[selectedDate].splice(parseInt(btn.dataset.idx), 1);
+      if (data[selectedDate].length === 0) delete data[selectedDate];
+      saveData();
+      renderCal(); renderDay(); renderFights();
+    };
+  });
+}
+
+function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function resetModal() {
+  ['f-mobs','f-duration','f-gold','f-silver','f-copper','f-crystal','f-armor','f-potion','f-other']
+    .forEach(id => document.getElementById(id).value = 0);
+}
+
+document.getElementById('open-modal-btn').onclick = () => document.getElementById('modal').classList.add('open');
+document.getElementById('close-modal-btn').onclick = () => { document.getElementById('modal').classList.remove('open'); resetModal(); };
+document.getElementById('modal').onclick = e => {
+  if (e.target === document.getElementById('modal')) { document.getElementById('modal').classList.remove('open'); resetModal(); }
+};
+
+document.getElementById('save-fight-btn').onclick = () => {
+  const fight = {
+    mobs: getVal('f-mobs'), duration: getVal('f-duration'),
+    gold: getVal('f-gold'), silver: getVal('f-silver'), copper: getVal('f-copper'),
+    crystal: getVal('f-crystal'), armor: getVal('f-armor'),
+    potion: getVal('f-potion'), other: getVal('f-other')
+  };
+  if (!data[selectedDate]) data[selectedDate] = [];
+  data[selectedDate].push(fight);
+  saveData();
+  document.getElementById('modal').classList.remove('open');
+  resetModal();
+  renderCal(); renderDay(); renderFights();
+};
+
+document.getElementById('prev-month').onclick = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCal(); };
+document.getElementById('next-month').onclick  = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCal(); };
+
+// Init
+loadData();
+initCal();
+renderCal();
+renderDay();
+renderFights();
+</script>
+</body>
+</html>
